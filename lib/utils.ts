@@ -1,23 +1,9 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { authClient } from "@/lib/auth-client"
 import { CoreToolMessage, CoreAssistantMessage } from "ai"
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
-}
-
-export function useClientUser() {
-
-    const {
-        data: session,
-        isPending, //loading state
-    } = authClient.useSession()
-
-    return {
-        session,
-        isPending
-    }
 }
 
 export function generateUUID(): string {

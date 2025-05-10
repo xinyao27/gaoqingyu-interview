@@ -9,10 +9,11 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                // 自定义颜色可以在这里添加
+
             },
             fontFamily: {
-                // 自定义字体可以在这里添加
+                sans: ['var(--font-geist)'],
+                mono: ['var(--font-geist-mono)'],
             },
             typography: {
                 DEFAULT: {
@@ -33,7 +34,7 @@ const config: Config = {
             },
         },
     },
-    plugins: [require('@tailwindcss/typography')],
+    plugins: [require('tailwindcss-animate'), require('@tailwindcss/typography')],
 };
 
 export default config; 

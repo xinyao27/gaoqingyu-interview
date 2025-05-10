@@ -5,6 +5,7 @@ import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
+import { Greeting } from './greeting';
 
 interface MessagesProps {
     chatId: string;
@@ -39,7 +40,7 @@ function PureMessages({
             ref={messagesContainerRef}
             className="flex flex-col min-w-0 gap-6 flex-1 overflow-y-scroll pt-4 relative"
         >
-            {messages.length === 0 && <div className="text-center p-4">开始聊天吧！</div>}
+            {messages.length === 0 && <Greeting />}
 
             {messages.map((message, index) => (
                 <PreviewMessage

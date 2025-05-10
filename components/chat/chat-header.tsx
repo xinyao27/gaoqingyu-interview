@@ -8,6 +8,14 @@ import { ModelSelector } from "./model-selector"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { memo } from "react"
+import { UserButton } from "@daveyplate/better-auth-ui"
+import { ModeToggle } from "../mode-toggle"
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { useWindowSize } from "usehooks-ts"
+import { PencilSquareIcon } from "../icons"
+import { SidebarToggleButton } from "../sidebar-toggle-button"
+import { useSidebar } from "../ui/sidebar"
+import { NewChatButton } from "../new-chat-button"
 
 interface ChatHeaderProps {
     className?: string
@@ -20,7 +28,9 @@ function PureChatHeader({
     selectedModel,
     onModelChange,
 }: ChatHeaderProps) {
-    const router = useRouter();
+
+    const { width: windowWidth } = useWindowSize();
+    const { open } = useSidebar();
     return (
         <header
             className={cn(
@@ -28,25 +38,22 @@ function PureChatHeader({
                 className
             )}
         >
-            <div className="flex-1">
+
+            <div className="flex-1 flex items-center gap-2">
+                {(!open || windowWidth < 768) && (
+                    <>
+                        <SidebarToggleButton />
+                        <NewChatButton />
+                    </>
+                )}
                 <ModelSelector
                     selectedModel={selectedModel}
                     onModelChange={onModelChange}
                 />
             </div>
-            <div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg border-2 flex items-center gap-1.5"
-                    onClick={() => {
-                        router.push('/');
-                        router.refresh();
-                    }}
-                >
-                    <PlusIcon size={16} />
-                    <span>New Chat</span>
-                </Button>
+            <div className="flex items-center gap-2">
+                <ModeToggle />
+                <UserButton />
             </div>
         </header>
     )
