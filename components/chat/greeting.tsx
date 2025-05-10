@@ -15,7 +15,7 @@ export const Greeting = () => {
                 transition={{ delay: 0.5 }}
                 className="text-4xl font-semibold text-center"
             >
-                Hello, {session?.user.name}!
+                {session ? `Hello, ${session.user.name}!` : ''}
             </motion.div>
         </div>
     );

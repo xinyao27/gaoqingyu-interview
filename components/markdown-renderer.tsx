@@ -18,7 +18,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
                 components={{
                     code({ node, inline, className, children, ...props }: any) {
                         const match = /language-(\w+)/.exec(className || "");
-                        return !inline && match ? (
+                        return inline! && match ? (
                             <SyntaxHighlighter
                                 // @ts-ignore - 类型错误，但实际可用
                                 style={oneDark}
