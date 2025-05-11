@@ -10,7 +10,14 @@ import { deleteMessagesByChatIdAfterTimestamp, getMessageById } from '@/database
 
 export async function saveChatModelAsCookie(model: string) {
     const cookieStore = await cookies();
-    cookieStore.set('chat-model', model);
+    cookieStore.set({
+        name: 'chat-model',
+        value: model,
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365, // 1年
+        httpOnly: false, // 允许JavaScript访问
+        sameSite: 'strict'
+    });
 }
 
 export async function generateTitleFromUserMessage({
@@ -18,17 +25,17 @@ export async function generateTitleFromUserMessage({
 }: {
     message: UIMessage;
 }) {
-    const { text: title } = await generateText({
-        model: myProvider.languageModel('title-model'),
-        system: `\n
-      - you will generate a short title based on the first message a user begins a conversation with
-      - ensure it is not more than 80 characters long
-      - the title should be a summary of the user's message
-      - do not use quotes or colons`,
-        prompt: JSON.stringify(message),
-    });
+    // const { text: title } = await generateText({
+    //     model: myProvider.languageModel('title-model'),
+    //     system: `\n
+    //   - you will generate a short title based on the first message a user begins a conversation with
+    //   - ensure it is not more than 80 characters long
+    //   - the title should be a summary of the user's message
+    //   - do not use quotes or colons`,
+    //     prompt: JSON.stringify(message),
+    // });
 
-    return title;
+    return 'new chat';
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {

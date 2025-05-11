@@ -19,10 +19,9 @@ import {
 } from '@/database/queries';
 import { generateUUID, getTrailingMessageId } from '@/lib/utils';
 import { generateTitleFromUserMessage } from '@/app/chat/actions';
-import { myProvider } from '@/lib/ai/providers';
+import { openai } from '@/lib/ai/providers';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { isProductionEnvironment } from '@/lib/constants';
-import { getWeather } from '@/lib/ai/tools/get-weather';
 import { geolocation } from '@vercel/functions';
 import { after } from 'next/server';
 import {
@@ -33,6 +32,8 @@ import type { Chat } from '@/database/schema';
 import { differenceInSeconds } from 'date-fns';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { ProviderType } from '@/lib/ai/types';
+import { ollama } from 'ollama-ai-provider';
 
 const app = new Hono().basePath('/api/chat')
 let globalStreamContext: ResumableStreamContext | null = null;
@@ -57,7 +58,6 @@ function getStreamContext() {
     return globalStreamContext;
 }
 
-// Helper function to handle streams
 function handleStream(stream: ReadableStream | null, status = 200) {
     return new Response(stream, { status });
 }
@@ -74,7 +74,6 @@ app.post('/', async (c) => {
 
     try {
         const { id, message, selectedChatModel } = requestBody;
-
         const session = await auth.api.getSession({
             headers: await headers()
         })
@@ -137,18 +136,18 @@ app.post('/', async (c) => {
         const stream = createDataStream({
             execute: (dataStream) => {
                 const result = streamText({
-                    model: myProvider.languageModel(selectedChatModel),
+                    model: selectedChatModel.provider === ProviderType.OLLAMA ? ollama(selectedChatModel.id) : openai.languageModel(selectedChatModel.id),
                     system: systemPrompt({ selectedChatModel, requestHints }),
                     messages,
                     maxSteps: 5,
-                    experimental_activeTools: [
-                        'getWeather',
-                    ],
+                    // experimental_activeTools: [
+                    //     'getWeather',
+                    // ],
                     experimental_transform: smoothStream({ chunking: 'word' }),
                     experimental_generateMessageId: generateUUID,
-                    tools: {
-                        getWeather,
-                    },
+                    // tools: {
+                    //     getWeather,
+                    // },
                     onFinish: async ({ response }) => {
                         if (session?.user?.id) {
                             try {
@@ -180,8 +179,8 @@ app.post('/', async (c) => {
                                         },
                                     ],
                                 });
-                            } catch (_) {
-                                console.error('Failed to save chat');
+                            } catch (error) {
+                                console.error('Failed to save chat', error);
                             }
                         }
                     },
@@ -197,7 +196,8 @@ app.post('/', async (c) => {
                     sendReasoning: true,
                 });
             },
-            onError: () => {
+            onError: (error: any) => {
+                console.error('Stream error:', error);
                 return 'Oops, an error occurred!';
             },
         });
@@ -205,17 +205,19 @@ app.post('/', async (c) => {
         const streamContext = getStreamContext();
 
         if (streamContext) {
-            const resumableStream = await streamContext.resumableStream(streamId, () => stream);
-            return handleStream(resumableStream);
+            return new Response(
+                await streamContext.resumableStream(streamId, () => stream),
+            );
         } else {
-            return handleStream(stream);
+            return new Response(stream);
         }
-    } catch (_) {
+    } catch (error) {
+        console.error('Error processing chat request:', error);
         return c.json({ error: 'An error occurred while processing your request' }, 500);
     }
 });
 
-app.get('/:id', async (c) => {
+app.get('/', async (c) => {
     const streamContext = getStreamContext();
     const resumeRequestedAt = new Date();
 
@@ -223,10 +225,11 @@ app.get('/:id', async (c) => {
         return new Response(null, { status: 204 });
     }
 
-    const chatId = c.req.param('id');
+    const { searchParams } = new URL(c.req.url);
+    const chatId = searchParams.get('chatId');
 
     if (!chatId) {
-        return c.json({ error: 'id is required' }, 400);
+        return c.json({ error: 'chatId is required' }, 400);
     }
 
     const session = await auth.api.getSession({
@@ -241,7 +244,7 @@ app.get('/:id', async (c) => {
 
     try {
         chat = await getChatById({ id: chatId });
-    } catch {
+    } catch (error) {
         return c.json({ error: 'Not found' }, 404);
     }
 

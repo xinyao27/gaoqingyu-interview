@@ -15,6 +15,7 @@ import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { MessageEditor } from './message-editor';
 import type { UseChatHelpers } from '@ai-sdk/react';
+import { MessageReasoning } from './message-reasoning';
 
 const PurePreviewMessage = ({
     chatId,
@@ -84,6 +85,16 @@ const PurePreviewMessage = ({
                         {message.parts?.map((part, index) => {
                             const { type } = part;
                             const key = `message-${message.id}-part-${index}`;
+
+                            if (type === 'reasoning') {
+                                return (
+                                    <MessageReasoning
+                                        key={key}
+                                        isLoading={isLoading}
+                                        reasoning={part.reasoning}
+                                    />
+                                );
+                            }
 
                             if (type === 'text') {
                                 if (mode === 'view') {

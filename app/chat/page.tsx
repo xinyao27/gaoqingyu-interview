@@ -1,16 +1,18 @@
-import React from "react";
+import { cookies, headers } from 'next/headers';
 import { ChatContainer } from "@/components/chat/chat-container";
-
-import { cookies } from "next/headers";
-import { generateUUID } from "@/lib/utils";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
-import { RedirectToSignIn } from "@daveyplate/better-auth-ui";
+import { DEFAULT_MODEL } from '@/lib/ai/models';
+import { generateUUID } from '@/lib/utils';
+import { getModelList, getAvailableProviders } from './models-setup';
+import { RedirectToSignIn } from '@daveyplate/better-auth-ui';
 
 export default async function Page() {
     const id = generateUUID();
 
     const cookieStore = await cookies();
     const modelIdFromCookie = cookieStore.get('chat-model');
+
+    const modelList = await getModelList();
+    const availableProviders = await getAvailableProviders();
 
     if (!modelIdFromCookie) {
         return (
@@ -20,7 +22,11 @@ export default async function Page() {
                     key={id}
                     id={id}
                     initialMessages={[]}
-                    initialChatModel={DEFAULT_CHAT_MODEL}
+                    initialModelData={{
+                        serverModelList: modelList,
+                        serverAvailableProviders: availableProviders,
+                        defaultModel: DEFAULT_MODEL
+                    }}
                     autoResume={false}
                 />
             </>
@@ -31,11 +37,16 @@ export default async function Page() {
         <>
             <RedirectToSignIn />
             <ChatContainer
+                key={id}
                 id={id}
                 initialMessages={[]}
-                initialChatModel={modelIdFromCookie.value}
-                autoResume={true}
+                initialModelData={{
+                    serverModelList: modelList,
+                    serverAvailableProviders: availableProviders,
+                    defaultModel: DEFAULT_MODEL
+                }}
+                autoResume={false}
             />
         </>
     );
-} 
+}

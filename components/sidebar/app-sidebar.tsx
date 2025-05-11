@@ -37,11 +37,10 @@ import { useRouter } from "next/navigation"
 import { SidebarToggleButton } from "../sidebar-toggle-button"
 import { NewChatButton } from "../new-chat-button"
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-    const router = useRouter();
     const { setOpenMobile } = useSidebar();
 
     return (
-        <Sidebar className="border-r-0" {...props}>
+        <Sidebar className="group-[data-side=left]:border-r-0" {...props}>
             <SidebarHeader>
                 <SidebarMenu>
                     <div className="flex flex-row justify-between items-center">

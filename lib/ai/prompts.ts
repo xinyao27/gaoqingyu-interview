@@ -1,4 +1,5 @@
 import type { Geo } from '@vercel/functions';
+import { Model } from './models';
 
 
 export const artifactsPrompt = `
@@ -56,12 +57,12 @@ export const systemPrompt = ({
     selectedChatModel,
     requestHints,
 }: {
-    selectedChatModel: string;
+    selectedChatModel: Model;
     requestHints: RequestHints;
 }) => {
     const requestPrompt = getRequestPromptFromHints(requestHints);
 
-    if (selectedChatModel === 'chat-model-reasoning') {
+    if (selectedChatModel.isReasoning) {
         return `${regularPrompt}\n\n${requestPrompt}`;
     } else {
         return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;

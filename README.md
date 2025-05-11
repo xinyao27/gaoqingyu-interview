@@ -2,7 +2,24 @@
 
 ## Getting Started
 
-First, run the development server:
+First, create a PostgreSQL Database then configure your environment variables.
+
+You can generate a `BETTER_AUTH_SECRET` [here](https://www.better-auth.com/docs/installation#set-environment-variables).
+
+```bash
+BETTER_AUTH_SECRET=""
+DATABASE_URL=""
+```
+
+Then generate your schema and perform migrations with drizzle-kit.
+
+```bash
+npx @better-auth/cli generate
+npx drizzle-kit generate
+npx drizzle-kit migrate
+```
+
+Run the development server:
 
 ```bash
 npm run dev

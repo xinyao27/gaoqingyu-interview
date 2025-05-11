@@ -58,6 +58,7 @@ function PureMultimodalInput({
 
     useEffect(() => {
         if (textareaRef.current) {
+            textareaRef.current.style.height = '120px';
             adjustHeight();
         }
     }, []);
@@ -72,7 +73,7 @@ function PureMultimodalInput({
     const resetHeight = () => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = '98px';
+            textareaRef.current.style.height = '120px';
         }
     };
 
@@ -84,13 +85,10 @@ function PureMultimodalInput({
     useEffect(() => {
         if (textareaRef.current) {
             const domValue = textareaRef.current.value;
-            // 优先使用DOM值而不是localStorage以处理水合
             const finalValue = domValue || localStorageInput || '';
             setInput(finalValue);
             adjustHeight();
         }
-        // 水合后只运行一次
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
@@ -151,7 +149,7 @@ function PureMultimodalInput({
             const { error } = await response.json();
             toast.error(error);
         } catch (error) {
-            toast.error('上传文件失败，请重试！');
+            toast.error('File upload failed, please try again!');
         }
     };
 
@@ -173,7 +171,7 @@ function PureMultimodalInput({
                     ...successfullyUploadedAttachments,
                 ]);
             } catch (error) {
-                console.error('上传文件错误！', error);
+                console.error('File upload error!', error);
             } finally {
                 setUploadQueue([]);
             }
@@ -255,10 +253,10 @@ function PureMultimodalInput({
                 value={input}
                 onChange={handleInput}
                 className={cx(
-                    'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl text-base! bg-muted pb-10 dark:border-zinc-700',
+                    'min-h-[100px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl text-base! bg-muted pb-10 dark:border-zinc-700',
                     className,
                 )}
-                rows={2}
+                rows={4}
                 autoFocus
                 onKeyDown={(event) => {
                     if (

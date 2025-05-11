@@ -16,21 +16,26 @@ import { PencilSquareIcon } from "../icons"
 import { SidebarToggleButton } from "../sidebar-toggle-button"
 import { useSidebar } from "../ui/sidebar"
 import { NewChatButton } from "../new-chat-button"
+import { Model } from "@/lib/ai/models"
+import { InitialModelData } from "./chat-container"
 
 interface ChatHeaderProps {
     className?: string
-    selectedModel: string
-    onModelChange: (model: string) => void
+    selectedModel: Model
+    setSelectedModel: (model: Model) => void
+    initModelData: InitialModelData
 }
 
 function PureChatHeader({
     className,
     selectedModel,
-    onModelChange,
+    setSelectedModel,
+    initModelData,
 }: ChatHeaderProps) {
 
     const { width: windowWidth } = useWindowSize();
     const { open } = useSidebar();
+
     return (
         <header
             className={cn(
@@ -48,7 +53,8 @@ function PureChatHeader({
                 )}
                 <ModelSelector
                     selectedModel={selectedModel}
-                    onModelChange={onModelChange}
+                    initModelData={initModelData}
+                    setSelectedModel={setSelectedModel}
                 />
             </div>
             <div className="flex items-center gap-2">

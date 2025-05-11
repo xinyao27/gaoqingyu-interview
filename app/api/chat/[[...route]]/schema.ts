@@ -23,7 +23,14 @@ export const postRequestBodySchema = z.object({
             )
             .optional(),
     }),
-    selectedChatModel: z.string(),
+    selectedChatModel: z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string(),
+        provider: z.string(),
+        isReasoning: z.boolean(),
+        isVision: z.boolean(),
+    }),
 });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;

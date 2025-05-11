@@ -40,8 +40,12 @@ export function useAutoResume({
         const dataPart = data[0] as DataPart;
 
         if (dataPart.type === 'append-message') {
-            const message = JSON.parse(dataPart.message) as UIMessage;
-            setMessages([...initialMessages, message]);
+            try {
+                const message = JSON.parse(dataPart.message) as UIMessage;
+                setMessages([...initialMessages, message]);
+            } catch (error) {
+                console.error('Error parsing message:', error, dataPart.message);
+            }
         }
     }, [data, initialMessages, setMessages]);
 }

@@ -20,126 +20,75 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 import { saveChatModelAsCookie } from "@/app/chat/actions"
-
-export type ModelOption = {
-    value: string
-    label: string
-    category: "anthropic" | "deepseek" | "ollama"
-    isVision?: boolean
-}
-
-// 模型列表
-const modelOptions: ModelOption[] = [
-    {
-        value: "claude-3.7-sonnet",
-        label: "Claude 3.7 Sonnet",
-        category: "anthropic",
-        isVision: true
-    },
-    {
-        value: "claude-3.7-sonnet-thinking",
-        label: "Claude 3.7 Sonnet Thinking",
-        category: "anthropic",
-    },
-    {
-        value: "claude-3.5-sonnet",
-        label: "Claude 3.5 Sonnet",
-        category: "anthropic",
-        isVision: true
-    },
-    {
-        value: "claude-3.5-haiku",
-        label: "Claude 3.5 Haiku",
-        category: "anthropic",
-        isVision: true
-    },
-    {
-        value: "claude-3-haiku",
-        label: "Claude 3 Haiku",
-        category: "anthropic",
-        isVision: true
-    },
-    {
-        value: "deepseek-chat",
-        label: "DeepSeek Chat",
-        category: "deepseek",
-    },
-    {
-        value: "deepseek-reasoner",
-        label: "DeepSeek Reasoner",
-        category: "deepseek",
-    },
-    {
-        value: "llama3.2:latest",
-        label: "llama3.2:latest",
-        category: "ollama",
-    },
-    {
-        value: "nomic-embed-text:latest",
-        label: "nomic-embed-text:latest",
-        category: "ollama",
-    },
-    {
-        value: "qwen2:latest",
-        label: "qwen2:latest",
-        category: "ollama",
-    },
-    {
-        value: "qwen2.5-coder:14b",
-        label: "qwen2.5-coder:14b",
-        category: "ollama",
-    },
-    {
-        value: "qwen2.5-coder:32b",
-        label: "qwen2.5-coder:32b",
-        category: "ollama",
-    },
-    {
-        value: "qwen2m:latest",
-        label: "qwen2m:latest",
-        category: "ollama",
-    },
-    {
-        value: "qwq:32b",
-        label: "qwq:32b",
-        category: "ollama",
-    },
-    {
-        value: "qwq:latest",
-        label: "qwq:latest",
-        category: "ollama",
-    },
-]
+import { Model } from "@/lib/ai/models"
+import { ProviderType } from "@/lib/ai/types"
+import { AvailableProviders } from "@/lib/ai/types"
+import { startTransition, useMemo } from "react"
+import { InitialModelData } from "./chat-container"
 
 interface ModelSelectorProps {
-    selectedModel: string
-    onModelChange: (model: string) => void
+    selectedModel: Model
+    initModelData: InitialModelData
+    setSelectedModel: (model: Model) => void
 }
 
-export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps) {
+export function ModelSelector({ selectedModel, initModelData, setSelectedModel }: ModelSelectorProps) {
     const [open, setOpen] = React.useState(false)
+    const [optimisticModelId, setOptimisticModelId] = React.useOptimistic(selectedModel.id);
+    const { serverModelList, serverAvailableProviders } = initModelData
+    const [isClient, setIsClient] = React.useState(false);
+
+    React.useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const handleSelectModel = async (value: string) => {
-        if (value === selectedModel) return
+        const selectedModelObj = serverModelList.find(model => model.id === value) as Model;
 
-        onModelChange(value)
-        setOpen(false)
+        if (!selectedModelObj) {
+            toast.error("Unable to find selected model");
+            return;
+        }
+
+        setSelectedModel(selectedModelObj);
+        setOpen(false);
 
         try {
-            await saveChatModelAsCookie(value)
+            await saveChatModelAsCookie(value);
+
+            document.cookie = `chat-model=${value}; path=/; max-age=31536000; SameSite=Strict`;
+
+            startTransition(() => {
+                setOptimisticModelId(value);
+            });
         } catch (error) {
-            console.error("Error saving model selection:", error)
-            toast.error("Failed to save model preference")
+            console.error("Error saving model selection:", error);
+            toast.error("Unable to save model preference");
         }
     }
 
-    // 按类别分组的模型列表
-    const anthropicModels = modelOptions.filter(model => model.category === "anthropic")
-    const deepseekModels = modelOptions.filter(model => model.category === "deepseek")
-    const ollamaModels = modelOptions.filter(model => model.category === "ollama")
+    const isModelAvailable = (model: Model) => {
+        if (!serverModelList) return true;
+        return model.provider ? serverAvailableProviders[model.provider as ProviderType] : true;
+    }
 
-    const selectedModelName = modelOptions.find(model => model.value === selectedModel)?.label || selectedModel
+    const selectedModelProvider = selectedModel.provider;
+    const selectedChatModel = useMemo(
+        () =>
+            serverModelList.find(
+                (model) => model.id === optimisticModelId,
+            ),
+        [optimisticModelId],
+    );
 
+    const anthropicModels = serverModelList.filter(model => model.provider === ProviderType.ANTHROPIC)
+    const deepseekModels = serverModelList.filter(model => model.provider === ProviderType.DEEPSEEK)
+    const xaiModels = serverModelList.filter(model => model.provider === ProviderType.XAI)
+    const groqModels = serverModelList.filter(model => model.provider === ProviderType.GROQ)
+    const openaiModels = serverModelList.filter(model => model.provider === ProviderType.OPENAI)
+    const googleModels = serverModelList.filter(model => model.provider === ProviderType.GOOGLE_AI)
+    const ollamaModels = serverModelList.filter(model => model.provider === ProviderType.OLLAMA)
+    const selectedModelName = selectedChatModel?.name || selectedModel.name
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -150,63 +99,180 @@ export function ModelSelector({ selectedModel, onModelChange }: ModelSelectorPro
                     className="justify-between"
                 >
                     <div className="flex items-center gap-2">
-                        <span className="text-sm">{selectedModelName}</span>
-                        <span className="text-xs text-muted-foreground">Anthropic</span>
+                        {!isClient ? (
+                            <span className="text-sm">{selectedModel.name}</span>
+                        ) : (
+                            <>
+                                <span className="text-sm">{selectedModelName}</span>
+                                {selectedModelProvider && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {selectedModelProvider}
+                                        {serverAvailableProviders && selectedModelProvider &&
+                                            !serverAvailableProviders[selectedModelProvider as ProviderType] && (
+                                                <span className="ml-1 text-xs text-red-500">(Unavailable)</span>
+                                            )}
+                                    </span>
+                                )}
+                            </>
+                        )}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[350px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder="search model" className="h-9" />
+                    <CommandInput placeholder="Search models" className="h-9" />
                     <CommandList className="max-h-[400px]">
-                        <CommandEmpty>没有找到匹配的模型</CommandEmpty>
+                        <CommandEmpty>No matching models found</CommandEmpty>
 
-                        <CommandGroup heading="Anthropic">
-                            {anthropicModels.map((model) => (
-                                <CommandItem
-                                    key={model.value}
-                                    value={model.value}
-                                    onSelect={handleSelectModel}
-                                    className="flex items-center justify-between"
-                                >
-                                    <span>{model.label}</span>
-                                    {selectedModel === model.value && (
-                                        <Check className="h-4 w-4 text-green-500" />
-                                    )}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
 
-                        <CommandGroup heading="DeepSeek">
-                            {deepseekModels.map((model) => (
-                                <CommandItem
-                                    key={model.value}
-                                    value={model.value}
-                                    onSelect={handleSelectModel}
-                                >
-                                    <span>{model.label}</span>
-                                    {selectedModel === model.value && (
-                                        <Check className="ml-auto h-4 w-4 text-green-500" />
-                                    )}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
+                        {serverAvailableProviders && !serverAvailableProviders[ProviderType.ANTHROPIC] ? null : (
+                            <CommandGroup heading="Anthropic">
+                                {anthropicModels.length > 0 ? anthropicModels.map((model) => (
+                                    <CommandItem
+                                        key={model.id}
+                                        value={model.id}
+                                        onSelect={handleSelectModel}
+                                        className={cn(
+                                            "flex items-center justify-between",
+                                            !isModelAvailable(model) && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        disabled={!isModelAvailable(model)}
+                                    >
+                                        <span>{model.name}</span>
+                                        {selectedModel.id === model.id && (
+                                            <Check className="h-4 w-4 text-green-500" />
+                                        )}
+                                    </CommandItem>
+                                )) : null}
+                            </CommandGroup>
+                        )}
 
-                        <CommandGroup heading="Ollama">
-                            {ollamaModels.map((model) => (
-                                <CommandItem
-                                    key={model.value}
-                                    value={model.value}
-                                    onSelect={handleSelectModel}
-                                >
-                                    <span>{model.label}</span>
-                                    {selectedModel === model.value && (
-                                        <Check className="ml-auto h-4 w-4 text-green-500" />
-                                    )}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
+                        {serverAvailableProviders && !serverAvailableProviders[ProviderType.DEEPSEEK] ? null : (
+                            <CommandGroup heading="DeepSeek">
+                                {deepseekModels.length > 0 ? deepseekModels.map((model) => (
+                                    <CommandItem
+                                        key={model.id}
+                                        value={model.id}
+                                        onSelect={handleSelectModel}
+                                        className={cn(
+                                            !isModelAvailable(model) && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        disabled={!isModelAvailable(model)}
+                                    >
+                                        <span>{model.name}</span>
+                                        {selectedModel.id === model.id && (
+                                            <Check className="ml-auto h-4 w-4 text-green-500" />
+                                        )}
+                                    </CommandItem>
+                                )) : null}
+                            </CommandGroup>
+                        )}
+
+                        {serverAvailableProviders && !serverAvailableProviders[ProviderType.OLLAMA] ? null : (
+                            <CommandGroup heading="Ollama">
+                                {ollamaModels.length > 0 ? ollamaModels.map((model) => (
+                                    <CommandItem
+                                        key={model.id}
+                                        value={model.id}
+                                        onSelect={handleSelectModel}
+                                        className={cn(
+                                            !isModelAvailable(model) && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        disabled={!isModelAvailable(model)}
+                                    >
+                                        <span>{model.name}</span>
+                                        {selectedModel.id === model.id && (
+                                            <Check className="ml-auto h-4 w-4 text-green-500" />
+                                        )}
+                                    </CommandItem>
+                                )) : null}
+                            </CommandGroup>
+                        )}
+
+                        {serverAvailableProviders && !serverAvailableProviders[ProviderType.XAI] ? null : (
+                            <CommandGroup heading="XAI">
+                                {xaiModels.length > 0 ? xaiModels.map((model) => (
+                                    <CommandItem
+                                        key={model.id}
+                                        value={model.id}
+                                        onSelect={handleSelectModel}
+                                        className={cn(
+                                            !isModelAvailable(model) && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        disabled={!isModelAvailable(model)}
+                                    >
+                                        <span>{model.name}</span>
+                                        {selectedModel.id === model.id && (
+                                            <Check className="ml-auto h-4 w-4 text-green-500" />
+                                        )}
+                                    </CommandItem>
+                                )) : null}
+                            </CommandGroup>
+                        )}
+
+                        {serverAvailableProviders && !serverAvailableProviders[ProviderType.GROQ] ? null : (
+                            <CommandGroup heading="Groq">
+                                {groqModels.length > 0 ? groqModels.map((model) => (
+                                    <CommandItem
+                                        key={model.id}
+                                        value={model.id}
+                                        onSelect={handleSelectModel}
+                                        className={cn(
+                                            !isModelAvailable(model) && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        disabled={!isModelAvailable(model)}
+                                    >
+                                        <span>{model.name}</span>
+                                        {selectedModel.id === model.id && (
+                                            <Check className="ml-auto h-4 w-4 text-green-500" />
+                                        )}
+                                    </CommandItem>
+                                )) : null}
+                            </CommandGroup>
+                        )}
+
+                        {serverAvailableProviders && !serverAvailableProviders[ProviderType.OPENAI] ? null : (
+                            <CommandGroup heading="OpenAI">
+                                {openaiModels.length > 0 ? openaiModels.map((model) => (
+                                    <CommandItem
+                                        key={model.id}
+                                        value={model.id}
+                                        onSelect={handleSelectModel}
+                                        className={cn(
+                                            !isModelAvailable(model) && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        disabled={!isModelAvailable(model)}
+                                    >
+                                        <span>{model.name}</span>
+                                        {selectedModel.id === model.id && (
+                                            <Check className="ml-auto h-4 w-4 text-green-500" />
+                                        )}
+                                    </CommandItem>
+                                )) : null}
+                            </CommandGroup>
+                        )}
+
+                        {serverAvailableProviders && !serverAvailableProviders[ProviderType.GOOGLE_AI] ? null : (
+                            <CommandGroup heading="Google">
+                                {googleModels.length > 0 ? googleModels.map((model) => (
+                                    <CommandItem
+                                        key={model.id}
+                                        value={model.id}
+                                        onSelect={handleSelectModel}
+                                        className={cn(
+                                            !isModelAvailable(model) && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        disabled={!isModelAvailable(model)}
+                                    >
+                                        <span>{model.name}</span>
+                                        {selectedModel.id === model.id && (
+                                            <Check className="ml-auto h-4 w-4 text-green-500" />
+                                        )}
+                                    </CommandItem>
+                                )) : null}
+                            </CommandGroup>
+                        )}
                     </CommandList>
                 </Command>
             </PopoverContent>

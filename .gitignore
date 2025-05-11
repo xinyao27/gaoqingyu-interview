@@ -45,3 +45,5 @@ yarn-error.log*
 # workspace
 .turbo
 .vscode
+
+test.ts
